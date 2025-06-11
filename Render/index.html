@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulación de Satélites GPS - Three.js</title>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Source Sans Pro', sans-serif;
+        }
+        .panel {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+        }
+        #controls {
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 80%;
+            max-width: 600px;
+        }
+        #positionControls {
+            top: 20px;
+            right: 20px;
+            width: 250px;
+        }
+        #layersPanel {
+            top: 20px;
+            left: 20px;
+            width: 250px;
+        }
+        #infoPanel {
+            bottom: 20px;
+            left: 20px;
+            width: 250px;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .slider-container label {
+            min-width: 20px;
+        }
+        .slider-container input {
+            flex-grow: 1;
+        }
+        .slider-value {
+            min-width: 60px;
+            text-align: right;
+        }
+        #timeline {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #timeSlider {
+            flex-grow: 1;
+            height: 5px;
+            -webkit-appearance: none;
+            background: #444;
+            border-radius: 5px;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+        }
+        #timeSlider:hover {
+            opacity: 1;
+        }
+        #timeSlider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            background: #0077be;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        #timeSlider::-moz-range-thumb {
+            width: 15px;
+            height: 15px;
+            background: #0077be;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        #timeDisplay {
+            min-width: 100px;
+            text-align: center;
+        }
+        #playControls {
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            background: #0077be;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #005c91;
+        }
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #444;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .toggle-slider {
+            background-color: #0077be;
+        }
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+        #solutions {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .info-value {
+            font-family: monospace;
+            margin: 5px 0;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        .color-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/fflate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+
+    <div id="layersPanel" class="panel">
+        <h3>Capas de Visualización</h3>
+        <div class="toggle-container">
+            <label class="toggle-switch">
+                <input type="checkbox" id="toggleOrbits" checked>
+                <span class="toggle-slider"></span>
+            </label>
+            <span>Órbitas</span>
+        </div>
+        <div class="toggle-container">
+            <label class="toggle-switch">
+                <input type="checkbox" id="toggleDistances" checked>
+                <span class="toggle-slider"></span>
+            </label>
+            <span>Esferas de Distancia</span>
+        </div>
+        <div class="toggle-container">
+            <label class="toggle-switch">
+                <input type="checkbox" id="toggleGrid" checked>
+                <span class="toggle-slider"></span>
+            </label>
+            <span>Grid de Referencia</span>
+        </div>
+        <div class="toggle-container">
+            <label class="toggle-switch">
+                <input type="checkbox" id="toggleConnections" checked>
+                <span class="toggle-slider"></span>
+            </label>
+            <span>Líneas de Conexión</span>
+        </div>
+        <div class="legend">
+            <h4>Leyenda</h4>
+            <div class="legend-item">
+                <div class="color-box" style="background: #ff0000;"></div>
+                <span>Satélite 1 (XY)</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background: #00ff00;"></div>
+                <span>Satélite 2 (YZ)</span>
+            </div>
+            <div class="legend-item">
+                <div class="color-box" style="background: #0000ff;"></div>
+                <span>Satélite 3 (XZ)</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="infoPanel" class="panel">
+        <h3>Información</h3>
+        <div id="distances">
+            <h4>Distancias a Satélites</h4>
+            <div class="info-value" id="distance1">Sat 1: -- km</div>
+            <div class="info-value" id="distance2">Sat 2: -- km</div>
+            <div class="info-value" id="distance3">Sat 3: -- km</div>
+        </div>
+        <div id="velocities">
+            <h4>Velocidades</h4>
+            <div class="info-value" id="velocity1">Sat 1: -- km/s</div>
+            <div class="info-value" id="velocity2">Sat 2: -- km/s</div>
+            <div class="info-value" id="velocity3">Sat 3: -- km/s</div>
+        </div>
+        <div id="coordinates">
+            <h4>Coordenadas Receptor</h4>
+            <div class="info-value" id="coordX">X: -- km</div>
+            <div class="info-value" id="coordY">Y: -- km</div>
+            <div class="info-value" id="coordZ">Z: -- km</div>
+        </div>
+    </div>
+
+    <div id="positionControls" class="panel">
+        <h3>Control de Posición</h3>
+        <div class="info-value" style="margin-bottom: 15px;">
+            Radio: 1.0 RT (superficie terrestre)
+        </div>
+        <div class="slider-container">
+            <label>Latitud:</label>
+            <input type="range" id="latitudeSlider" min="-90" max="90" value="0" step="1">
+            <span class="slider-value" id="latitudeValue">0°</span>
+        </div>
+        <div class="slider-container">
+            <label>Longitud:</label>
+            <input type="range" id="longitudeSlider" min="-180" max="180" value="0" step="1">
+            <span class="slider-value" id="longitudeValue">0°</span>
+        </div>
+        <div id="solutions">
+            <h4>Soluciones:</h4>
+            <div id="solution1"></div>
+            <div id="solution2"></div>
+        </div>
+    </div>
+
+    <div id="controls" class="panel">
+        <div id="timeline">
+            <span>Tiempo:</span>
+            <input type="range" id="timeSlider" min="0" max="100" value="0">
+            <span id="timeDisplay">t: 0</span>
+        </div>
+        <div id="playControls">
+            <button id="playButton">▶ Reproducir</button>
+            <button id="pauseButton">⏸ Pausar</button>
+            <button id="resetButton">⟲ Reiniciar</button>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>
