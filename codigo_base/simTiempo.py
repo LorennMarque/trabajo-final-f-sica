@@ -60,7 +60,7 @@ def calculo_orbita_RK_3D(m1, radio, start_pos, pasos=10000):
 
 C = 299_792_458
 
-def calcular_posicion_3D_con_error(df, t, x, y ,z, error_oscilador=1e-7):
+def calcular_posicion_3D_con_error(df, t, x, y ,z, error_oscilador=1/32768):
     # Obtener las posiciones de los satélites en tiempo t
     fila = df[df["t"] == t]
     if fila.empty:

@@ -49,7 +49,7 @@ def calculo_orbita_RK_3D(m1, radio, start_pos, pasos=10000, dt=1.0):
 #  ESTIMACIÓN GPS CON 4 SATÉLITES (x, y, z, sesgo de reloj)
 # ──────────────────────────────────────────────────────────────
 def posicion_4sats_con_error(df, t, x_real, y_real, z_real,
-                             error_oscilador=1e-7):
+                             error_oscilador=1/32768):
     """
     Devuelve posición estimada y sesgo Δt (en segundos) usando 4 satélites.
     El receptor REAL está en (x_real, y_real, z_real)—solo para simular.
